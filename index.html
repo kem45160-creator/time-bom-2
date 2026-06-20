@@ -466,7 +466,7 @@ async function analyze(){
     var BC={id:"1 - BOM ID",desc:"3 - BOM Description",inv:"4 - Inventory ID",
             op:"8 - Operation ID",wc:"9 - Work Center",od:"10 - Oper Desc",tm:"12 - Machine Time"};
     var PC={nbr:"Production Nbr.",inv:"Inventory ID",desc:"Order Description",
-            st:"Status",ed:"End Date",cu:"Customer Name"};
+            st:"Status",ed:"End Date",cu:"Customer Name",qty:"Qty. to Produce",lm:"Last Modified On"};
 
     // ตรวจ column
     var bk=Object.keys(bomRaw[0]);
@@ -508,7 +508,8 @@ async function analyze(){
           rows.push({inv_id:inv,bom_id:b.bid,bom_desc:b.bdesc,
             prod_nbr:String(p[PC.nbr]||"").trim(),prod_desc:String(p[PC.desc]||"").trim(),
             status:String(p[PC.st]||"").trim(),end_date:iso,ef:fmtD(iso),
-            customer:String(p[PC.cu]||"").trim(),ops:b.ops,wcs:wcs,matched:true});
+            customer:String(p[PC.cu]||"").trim(),qty_to_produce:String(p[PC.qty]||"").trim(),
+            last_mod:String(p[PC.lm]||"").trim(),ops:b.ops,wcs:wcs,matched:true});
         });
       }else{
         rows.push({inv_id:inv,bom_id:b.bid,bom_desc:b.bdesc,
@@ -645,7 +646,7 @@ function showDet(idx){
   var pic=IMG_MAP[r.inv_id];
   var picHtml=pic?"<div class=\"pic-wrap\"><div class=\"pic-box\"><img src=\""+pic+"\" alt=\"\"></div></div>":"";
   var ph=r.matched
-    ?"<div class=\"ii\"><label>Production Nbr.</label><span style=\"color:var(--blue);font-weight:700\">"+r.prod_nbr+"</span></div><div class=\"ii\"><label>Status</label><span>"+stB(r.status)+"</span></div><div class=\"ii\"><label>End Date</label><span>"+r.ef+"</span></div><div class=\"ii\"></div><div class=\"ii\" style=\"grid-column:span 2\"><label>Customer</label><span style=\"font-size:12px\">"+(r.customer||"-")+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>Order Description</label><span style=\"font-size:12px\">"+r.prod_desc+"</span></div>"
+    ?"<div class=\"ii\"><label>Production Nbr.</label><span style=\"color:var(--blue);font-weight:700\">"+r.prod_nbr+"</span></div><div class=\"ii\"><label>Status</label><span>"+stB(r.status)+"</span></div><div class=\"ii\"><label>End Date</label><span>"+r.ef+"</span></div><div class=\"ii\"><label>Last Modified On</label><span>"+(r.last_mod||"-")+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>Customer</label><span style=\"font-size:12px\">"+(r.customer||"-")+"</span></div><div class=\"ii\" style=\"grid-column:span 1\"><label>Order Description</label><span style=\"font-size:12px\">"+r.prod_desc+"</span></div><div class=\"ii\"><label>Qty. to Produce</label><span style=\"font-weight:700;color:var(--navy)\">"+( r.qty_to_produce ? Number(String(r.qty_to_produce).replace(/,/g,"")).toLocaleString()+" EA" : "-")+"</span></div>"
     :"<div class=\"ii\" style=\"grid-column:span 2\"><label>Production</label><span style=\"color:var(--orange)\">ยังไม่มีใน Production Order</span></div>";
   document.getElementById("mBd").innerHTML=picHtml+"<div class=\"ig\"><div class=\"ii\"><label>Inventory ID</label><span>"+r.inv_id+"</span></div><div class=\"ii\"><label>BOM ID</label><span>"+r.bom_id+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>BOM Description</label><span>"+r.bom_desc+"</span></div>"+ph+"</div><div class=\"dvd\"></div><div class=\"ops-ttl\">Operations ที่ยังไม่กรอกเวลา ("+r.ops.length+" รายการ)</div><table class=\"otbl\"><thead><tr><th>Op</th><th>Work Center</th><th>Description</th></tr></thead><tbody>"+ops+"</tbody></table>";
   document.getElementById("mbg").classList.add("open");
