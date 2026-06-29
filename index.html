@@ -113,21 +113,38 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
 .gist-status.ok{color:var(--green);background:#f0fdf4}
 .gist-status.err{color:var(--red);background:#fef2f2}
 /* ── Time Progress Bar ── */
-.time-progress{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px}
+.time-progress{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px;margin-top:18px}
 .tp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
 .tp-title{font-size:12px;font-weight:700;color:var(--navy)}
 .tp-stats{display:flex;gap:16px;font-size:12px}
 .tp-done{color:var(--green);font-weight:700}
 .tp-miss{color:var(--red);font-weight:700}
 .tp-total{color:var(--muted)}
-.tp-track{height:20px;background:#F1F5F9;border-radius:10px;overflow:hidden;position:relative}
+.tp-track{height:20px;background:#F1F5F9;border-radius:10px;overflow:hidden;position:relative;cursor:pointer;transition:opacity .15s}
+.tp-track:hover{opacity:.85}
+.tp-track-hint{font-size:10px;color:var(--muted);margin-top:3px;text-align:center}
 .tp-fill{height:100%;background:linear-gradient(90deg,#16A34A,#22c55e);border-radius:10px;transition:width .6s ease;min-width:0}
 .tp-fill-miss{height:100%;background:#fee2e2;position:absolute;top:0;right:0;border-radius:0 10px 10px 0}
-.tp-label-inside{position:absolute;top:50%;transform:translateY(-50%);left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:var(--navy);white-space:nowrap;pointer-events:none;top:50%}
 .tp-pct-row{display:flex;justify-content:space-between;margin-top:5px;font-size:11px}
 .tp-pct-done{color:var(--green);font-weight:700}
 .tp-pct-miss{color:var(--red);font-weight:700}
 .tp-skeleton{height:20px;border-radius:10px}
+/* ── WC Modal ── */
+.wc-mbg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.wc-mbg.open{display:flex}
+.wc-modal{background:#fff;border-radius:10px;width:560px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+.wc-mhd{background:var(--navy);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-radius:10px 10px 0 0}
+.wc-mhd h3{font-size:14px;font-weight:700}
+.wc-mhd button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+.wc-mbd{padding:18px;overflow-y:auto;flex:1}
+.wc-row{margin-bottom:14px}
+.wc-row-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.wc-name{font-size:13px;font-weight:700;color:var(--navy)}
+.wc-pct{font-size:12px;font-weight:700}
+.wc-track{height:13px;background:#F1F5F9;border-radius:6px;overflow:hidden}
+.wc-fill{height:100%;border-radius:6px;transition:width .5s ease}
+.wc-sub{font-size:11px;color:var(--muted);margin-top:3px}
+.wc-no-data{text-align:center;padding:32px;color:var(--muted);font-size:13px}
 </style>
 </head>
 <body>
@@ -205,14 +222,27 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
       <span class="tp-total">รวม: <span id="tpTotalN">-</span> ops</span>
     </div>
   </div>
-  <div class="tp-track" id="tpTrack">
+  <div class="tp-track" id="tpTrack" onclick="openWcModal()" title="คลิกเพื่อดูแยกรายแผนก">
     <div class="tp-fill sk sk-val tp-skeleton" id="tpFill" style="width:0%"></div>
   </div>
   <div class="tp-pct-row">
     <span class="tp-pct-done" id="tpPctDone">กรอกแล้ว —%</span>
+    <span class="tp-track-hint">🔍 คลิก Progress Bar เพื่อดูแยกรายแผนก</span>
     <span class="tp-pct-miss" id="tpPctMiss">ยังขาด —%</span>
   </div>
 </div>
+
+<!-- WC Breakdown Modal -->
+<div class="wc-mbg" id="wcMbg" onclick="closeWcModal(event)">
+  <div class="wc-modal">
+    <div class="wc-mhd">
+      <h3>📊 Machine Time แยกราย Work Center</h3>
+      <button onclick="closeWcModal()">&times;</button>
+    </div>
+    <div class="wc-mbd" id="wcMbd"></div>
+  </div>
+</div>
+
 
 <div class="tab-bar">
   <div class="tab active" id="tab1" onclick="setTab(1)">ตรงกับ Production <span class="cnt" id="cnt1">-</span></div>
@@ -570,6 +600,14 @@ async function analyze(){
     var tpTotal=allOpsExcl.length;
     var tpMiss=allOpsExcl.filter(function(r){return isZeroTime(r[BC.tm]);}).length;
     var tpDone=tpTotal-tpMiss;
+    // ── แยกราย WC ──
+    WC_DATA={};
+    allOpsExcl.forEach(function(r){
+      var wc=String(r[BC.wc]||"").trim()||"(ไม่ระบุ)";
+      if(!WC_DATA[wc])WC_DATA[wc]={done:0,total:0};
+      WC_DATA[wc].total++;
+      if(!isZeroTime(r[BC.tm]))WC_DATA[wc].done++;
+    });
     updTimeProgress(tpDone,tpMiss,tpTotal);
 
     var bomFilt=bomRaw.filter(function(r){
@@ -679,6 +717,8 @@ function updTimeProgress(done,miss,total){
   document.getElementById("tpTotalN").textContent=total.toLocaleString();
   document.getElementById("tpPctDone").textContent="กรอกแล้ว "+pctDone+"%";
   document.getElementById("tpPctMiss").textContent="ยังขาด "+pctMiss+"%";
+  // enable click only when data loaded
+  document.getElementById("tpTrack").style.cursor=total>0?"pointer":"default";
 }
 function resetTimeProgress(){
   var fill=document.getElementById("tpFill");
@@ -689,6 +729,35 @@ function resetTimeProgress(){
   document.getElementById("tpTotalN").textContent="-";
   document.getElementById("tpPctDone").textContent="กรอกแล้ว —%";
   document.getElementById("tpPctMiss").textContent="ยังขาด —%";
+  WC_DATA={};
+}
+var WC_DATA={};
+function openWcModal(){
+  if(!Object.keys(WC_DATA).length){showToast("โหลดข้อมูลก่อนนะครับ กด วิเคราะห์ ก่อน",3000);return;}
+  var wcs=Object.keys(WC_DATA).sort(function(a,b){
+    return (WC_DATA[b].total-WC_DATA[b].done)-(WC_DATA[a].total-WC_DATA[a].done); // sort by most missing first
+  });
+  var html="";
+  wcs.forEach(function(wc){
+    var d=WC_DATA[wc];
+    var pct=d.total>0?Math.round(d.done/d.total*100):0;
+    var color=pct>=80?"#16A34A":pct>=50?"#E8A020":"#DC2626";
+    var pctColor=pct>=80?"color:#16A34A":pct>=50?"color:#E8A020":"color:#DC2626";
+    html+='<div class="wc-row">'
+      +'<div class="wc-row-header">'
+      +'<span class="wc-name">'+wc+'</span>'
+      +'<span class="wc-pct" style="'+pctColor+'">'+pct+'% <span style="font-weight:400;color:#888;font-size:11px">('+d.done.toLocaleString()+' / '+d.total.toLocaleString()+' ops)</span></span>'
+      +'</div>'
+      +'<div class="wc-track"><div class="wc-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
+      +'<div class="wc-sub">กรอกแล้ว '+d.done.toLocaleString()+' ops &nbsp;·&nbsp; ยังขาด '+(d.total-d.done).toLocaleString()+' ops</div>'
+      +'</div>';
+  });
+  document.getElementById("wcMbd").innerHTML=html||'<div class="wc-no-data">ไม่มีข้อมูล</div>';
+  document.getElementById("wcMbg").classList.add("open");
+}
+function closeWcModal(e){
+  if(!e||e.target===document.getElementById("wcMbg"))
+    document.getElementById("wcMbg").classList.remove("open");
 }
 function enF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=false;});}
 function disF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=true;});}
