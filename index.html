@@ -150,9 +150,9 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
 .wc-expand-btn:hover{background:#f0f8ff;border-color:var(--blue);color:var(--blue)}
 .wc-detail{display:none;margin-top:8px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
 .wc-detail.open{display:block}
-.wc-detail-hd{display:grid;grid-template-columns:1fr 2fr 80px;background:var(--navy);padding:6px 10px;gap:8px}
+.wc-detail-hd{display:grid;grid-template-columns:1fr 2fr 70px 1.5fr;background:var(--navy);padding:6px 10px;gap:8px}
 .wc-detail-hd span{font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.3px}
-.wc-detail-row{display:grid;grid-template-columns:1fr 2fr 80px;padding:6px 10px;gap:8px;border-bottom:1px solid var(--border);font-size:12px;transition:.1s}
+.wc-detail-row{display:grid;grid-template-columns:1fr 2fr 70px 1.5fr;padding:6px 10px;gap:8px;border-bottom:1px solid var(--border);font-size:12px;transition:.1s}
 .wc-detail-row:last-child{border:none}
 .wc-detail-row:hover{background:#fef9ec}
 .wc-detail-inv{font-weight:600;color:var(--navy)}
@@ -641,7 +641,8 @@ async function analyze(){
         WC_DATA[wc].missing.push({
           inv_id: String(r[BC.inv]||"").trim(),
           bom_desc: String(r[BC.desc]||"").trim(),
-          op_id: String(r[BC.op]||"").trim()
+          op_id: String(r[BC.op]||"").trim(),
+          op_desc: String(r[BC.od]||"").trim()
         });
       }
     });
@@ -785,12 +786,13 @@ function openWcModal(){
     // detail rows (unique by inv_id+op_id)
     var detailHtml="";
     if(missCount>0){
-      detailHtml='<div class="wc-detail-hd"><span>Inventory ID</span><span>BOM Description</span><span>Operation</span></div>';
+      detailHtml='<div class="wc-detail-hd"><span>Inventory ID</span><span>BOM Description</span><span>Operation</span><span>Oper Desc</span></div>';
       d.missing.forEach(function(m){
         detailHtml+='<div class="wc-detail-row" style="cursor:pointer" onclick="showInvImg(\''+m.inv_id.replace(/'/g,"\\'")+'\')" title="คลิกดูรูป '+m.inv_id+'">'
           +'<span class="wc-detail-inv">🖼 '+m.inv_id+'</span>'
           +'<span class="wc-detail-desc">'+(m.bom_desc||'-')+'</span>'
           +'<span class="wc-detail-op">'+(m.op_id||'-')+'</span>'
+          +'<span class="wc-detail-desc" style="font-size:11px">'+(m.op_desc||'-')+'</span>'
           +'</div>';
       });
     } else {
