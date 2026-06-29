@@ -158,6 +158,14 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
 .wc-detail-inv{font-weight:600;color:var(--navy)}
 .wc-detail-desc{color:#555}
 .wc-detail-op{color:var(--blue);font-size:11px}
+/* image popup (WC missing items) */
+.img-popup-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:700;align-items:center;justify-content:center}
+.img-popup-bg.open{display:flex}
+.img-popup{background:#fff;border-radius:10px;padding:16px;max-width:420px;width:96vw;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)}
+.img-popup-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:10px}
+.img-popup img{max-width:100%;max-height:340px;border-radius:6px;border:1px solid var(--border);object-fit:contain}
+.img-popup-no{padding:40px 0;color:var(--muted);font-size:13px}
+.img-popup-close{margin-top:12px;padding:6px 20px;background:var(--navy);color:#fff;border:none;border-radius:6px;cursor:pointer;font-family:"Noto Sans Thai",sans-serif;font-size:13px}
 </style>
 </head>
 <body>
@@ -256,6 +264,14 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
   </div>
 </div>
 
+<!-- Image Popup (from WC missing row) -->
+<div class="img-popup-bg" id="imgPopupBg" onclick="closeImgPopup(event)">
+  <div class="img-popup">
+    <div class="img-popup-title" id="imgPopupTitle"></div>
+    <div id="imgPopupBody"></div>
+    <button class="img-popup-close" onclick="closeImgPopup()">ปิด</button>
+  </div>
+</div>
 
 <div class="tab-bar">
   <div class="tab active" id="tab1" onclick="setTab(1)">ตรงกับ Production <span class="cnt" id="cnt1">-</span></div>
@@ -771,8 +787,8 @@ function openWcModal(){
     if(missCount>0){
       detailHtml='<div class="wc-detail-hd"><span>Inventory ID</span><span>BOM Description</span><span>Operation</span></div>';
       d.missing.forEach(function(m){
-        detailHtml+='<div class="wc-detail-row">'
-          +'<span class="wc-detail-inv">'+m.inv_id+'</span>'
+        detailHtml+='<div class="wc-detail-row" style="cursor:pointer" onclick="showInvImg(\''+m.inv_id.replace(/'/g,"\\'")+'\')" title="คลิกดูรูป '+m.inv_id+'">'
+          +'<span class="wc-detail-inv">🖼 '+m.inv_id+'</span>'
           +'<span class="wc-detail-desc">'+(m.bom_desc||'-')+'</span>'
           +'<span class="wc-detail-op">'+(m.op_id||'-')+'</span>'
           +'</div>';
@@ -808,6 +824,18 @@ function toggleWcDetail(id,btn){
 function closeWcModal(e){
   if(!e||e.target===document.getElementById("wcMbg"))
     document.getElementById("wcMbg").classList.remove("open");
+}
+function showInvImg(invId){
+  document.getElementById("imgPopupTitle").textContent="🖼 "+invId;
+  var pic=IMG_MAP[invId];
+  document.getElementById("imgPopupBody").innerHTML=pic
+    ?'<img src="'+pic+'" alt="'+invId+'">'
+    :'<div class="img-popup-no">ไม่พบรูปภาพสำหรับ<br><b>'+invId+'</b><br><span style="font-size:11px;color:#aaa">ลาก Picture File เพื่อโหลดรูปก่อน</span></div>';
+  document.getElementById("imgPopupBg").classList.add("open");
+}
+function closeImgPopup(e){
+  if(!e||e.target===document.getElementById("imgPopupBg"))
+    document.getElementById("imgPopupBg").classList.remove("open");
 }
 function enF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=false;});}
 function disF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=true;});}
@@ -937,7 +965,7 @@ async function pushGist(){
   var st=document.getElementById("gistStatus");
   st.className="gist-status";st.textContent="☁️ กำลังอัปโหลดข้อมูล...";
   // แยก rows และ IMG_MAP เป็น 2 ไฟล์ใน Gist เดียวกัน
-  var dataPayload={ts:Date.now(),rows:ROWS};
+  var dataPayload={ts:Date.now(),rows:ROWS,wc_data:WC_DATA};
   var files={"delivery_data.json":{content:JSON.stringify(dataPayload)}};
   // รูปภาพ: แบ่งเป็น chunks เพื่อหลีกเลี่ยง Gist 1MB limit
   var imgKeys=Object.keys(IMG_MAP);
@@ -991,6 +1019,17 @@ async function pollGist(){
     var payload=JSON.parse(raw);
     if(!payload.rows||!payload.rows.length){st.className="gist-status err";st.textContent="❌ ไม่พบ data ใน Gist (เครื่อง X ยังไม่ได้ส่ง)";return;}
     ROWS=payload.rows;
+    // restore WC_DATA + progress bar
+    if(payload.wc_data&&Object.keys(payload.wc_data).length){
+      WC_DATA=payload.wc_data;
+      var tpDone=0,tpMiss=0,tpTotal=0;
+      Object.keys(WC_DATA).forEach(function(wc){
+        tpDone+=WC_DATA[wc].done;
+        tpTotal+=WC_DATA[wc].total;
+      });
+      tpMiss=tpTotal-tpDone;
+      updTimeProgress(tpDone,tpMiss,tpTotal);
+    }
     buildOpts();updCards();enF();
     document.getElementById("badge").className="hd-badge ok";
     document.getElementById("badge").textContent="Gist sync "+new Date().toLocaleTimeString("th-TH");
