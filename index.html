@@ -145,6 +145,19 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
 .wc-fill{height:100%;border-radius:6px;transition:width .5s ease}
 .wc-sub{font-size:11px;color:var(--muted);margin-top:3px}
 .wc-no-data{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+/* expand/collapse */
+.wc-expand-btn{background:none;border:1px solid var(--border);border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;color:var(--navy);transition:.15s;white-space:nowrap}
+.wc-expand-btn:hover{background:#f0f8ff;border-color:var(--blue);color:var(--blue)}
+.wc-detail{display:none;margin-top:8px;border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.wc-detail.open{display:block}
+.wc-detail-hd{display:grid;grid-template-columns:1fr 2fr 80px;background:var(--navy);padding:6px 10px;gap:8px}
+.wc-detail-hd span{font-size:10px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.3px}
+.wc-detail-row{display:grid;grid-template-columns:1fr 2fr 80px;padding:6px 10px;gap:8px;border-bottom:1px solid var(--border);font-size:12px;transition:.1s}
+.wc-detail-row:last-child{border:none}
+.wc-detail-row:hover{background:#fef9ec}
+.wc-detail-inv{font-weight:600;color:var(--navy)}
+.wc-detail-desc{color:#555}
+.wc-detail-op{color:var(--blue);font-size:11px}
 </style>
 </head>
 <body>
@@ -600,13 +613,21 @@ async function analyze(){
     var tpTotal=allOpsExcl.length;
     var tpMiss=allOpsExcl.filter(function(r){return isZeroTime(r[BC.tm]);}).length;
     var tpDone=tpTotal-tpMiss;
-    // ── แยกราย WC ──
+    // ── แยกราย WC + เก็บรายการที่ขาดเวลา ──
     WC_DATA={};
     allOpsExcl.forEach(function(r){
       var wc=String(r[BC.wc]||"").trim()||"(ไม่ระบุ)";
-      if(!WC_DATA[wc])WC_DATA[wc]={done:0,total:0};
+      if(!WC_DATA[wc])WC_DATA[wc]={done:0,total:0,missing:[]};
       WC_DATA[wc].total++;
-      if(!isZeroTime(r[BC.tm]))WC_DATA[wc].done++;
+      if(!isZeroTime(r[BC.tm])){
+        WC_DATA[wc].done++;
+      } else {
+        WC_DATA[wc].missing.push({
+          inv_id: String(r[BC.inv]||"").trim(),
+          bom_desc: String(r[BC.desc]||"").trim(),
+          op_id: String(r[BC.op]||"").trim()
+        });
+      }
     });
     updTimeProgress(tpDone,tpMiss,tpTotal);
 
@@ -735,25 +756,54 @@ var WC_DATA={};
 function openWcModal(){
   if(!Object.keys(WC_DATA).length){showToast("โหลดข้อมูลก่อนนะครับ กด วิเคราะห์ ก่อน",3000);return;}
   var wcs=Object.keys(WC_DATA).sort(function(a,b){
-    return (WC_DATA[b].total-WC_DATA[b].done)-(WC_DATA[a].total-WC_DATA[a].done); // sort by most missing first
+    return (WC_DATA[b].total-WC_DATA[b].done)-(WC_DATA[a].total-WC_DATA[a].done);
   });
   var html="";
-  wcs.forEach(function(wc){
+  wcs.forEach(function(wc,idx){
     var d=WC_DATA[wc];
     var pct=d.total>0?Math.round(d.done/d.total*100):0;
     var color=pct>=80?"#16A34A":pct>=50?"#E8A020":"#DC2626";
     var pctColor=pct>=80?"color:#16A34A":pct>=50?"color:#E8A020":"color:#DC2626";
+    var missCount=d.missing.length;
+    var detailId="wcdet_"+idx;
+    // detail rows (unique by inv_id+op_id)
+    var detailHtml="";
+    if(missCount>0){
+      detailHtml='<div class="wc-detail-hd"><span>Inventory ID</span><span>BOM Description</span><span>Operation</span></div>';
+      d.missing.forEach(function(m){
+        detailHtml+='<div class="wc-detail-row">'
+          +'<span class="wc-detail-inv">'+m.inv_id+'</span>'
+          +'<span class="wc-detail-desc">'+(m.bom_desc||'-')+'</span>'
+          +'<span class="wc-detail-op">'+(m.op_id||'-')+'</span>'
+          +'</div>';
+      });
+    } else {
+      detailHtml='<div style="padding:10px 12px;font-size:12px;color:var(--green)">✅ กรอกครบทุก operation แล้ว</div>';
+    }
     html+='<div class="wc-row">'
       +'<div class="wc-row-header">'
       +'<span class="wc-name">'+wc+'</span>'
-      +'<span class="wc-pct" style="'+pctColor+'">'+pct+'% <span style="font-weight:400;color:#888;font-size:11px">('+d.done.toLocaleString()+' / '+d.total.toLocaleString()+' ops)</span></span>'
+      +'<div style="display:flex;align-items:center;gap:10px">'
+      +'<span class="wc-pct" style="'+pctColor+'">'+pct+'% <span style="font-weight:400;color:#888;font-size:11px">('+d.done.toLocaleString()+'/'+d.total.toLocaleString()+' ops)</span></span>'
+      +(missCount>0
+        ?'<button class="wc-expand-btn" onclick="toggleWcDetail(\''+detailId+'\',this)">▶ ขาด '+missCount+' รายการ</button>'
+        :'<span style="font-size:11px;color:var(--green)">✅ ครบ</span>')
+      +'</div>'
       +'</div>'
       +'<div class="wc-track"><div class="wc-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
-      +'<div class="wc-sub">กรอกแล้ว '+d.done.toLocaleString()+' ops &nbsp;·&nbsp; ยังขาด '+(d.total-d.done).toLocaleString()+' ops</div>'
+      +'<div class="wc-sub">กรอกแล้ว '+d.done.toLocaleString()+' ops &nbsp;·&nbsp; ยังขาด '+missCount.toLocaleString()+' ops</div>'
+      +'<div class="wc-detail" id="'+detailId+'">'+detailHtml+'</div>'
       +'</div>';
   });
   document.getElementById("wcMbd").innerHTML=html||'<div class="wc-no-data">ไม่มีข้อมูล</div>';
   document.getElementById("wcMbg").classList.add("open");
+}
+function toggleWcDetail(id,btn){
+  var el=document.getElementById(id);
+  var isOpen=el.classList.toggle("open");
+  btn.textContent=isOpen
+    ? btn.textContent.replace("▶","▼")
+    : btn.textContent.replace("▼","▶");
 }
 function closeWcModal(e){
   if(!e||e.target===document.getElementById("wcMbg"))
