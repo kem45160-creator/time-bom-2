@@ -99,6 +99,35 @@ td{padding:9px 12px;font-size:13px;color:var(--navy);vertical-align:middle}
 .ov p{font-size:14px;color:var(--muted)}
 .toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:14px 22px;border-radius:8px;font-size:13px;z-index:600;max-width:88vw;text-align:center;white-space:pre-line;box-shadow:0 4px 20px rgba(0,0,0,.3);line-height:1.6}
 .toast.open{display:block}
+.receiver-hint{display:none;font-size:11px;color:var(--blue);padding:6px 24px 0;background:var(--white)}
+body.mode-receiver .receiver-hint{display:block}
+body.mode-receiver #sl1,body.mode-receiver #sl2{opacity:.35;pointer-events:none}
+body.mode-receiver #btnGo{display:none}
+body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
+.gist-panel{background:var(--white);border-bottom:2px solid var(--blue);padding:10px 24px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.gist-panel input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-family:"Noto Sans Thai",sans-serif;font-size:12px;color:var(--navy);outline:none}
+.gist-panel input:focus{border-color:var(--blue)}
+.gist-mode-btn{padding:7px 14px;border:1px solid var(--border);border-radius:6px;font-family:"Noto Sans Thai",sans-serif;font-size:12px;cursor:pointer;background:#fff;color:var(--muted);transition:.15s}
+.gist-mode-btn.active{background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700}
+.gist-status{font-size:11px;color:var(--muted);padding:4px 8px;background:#f1f5f9;border-radius:5px;white-space:nowrap}
+.gist-status.ok{color:var(--green);background:#f0fdf4}
+.gist-status.err{color:var(--red);background:#fef2f2}
+/* ── Time Progress Bar ── */
+.time-progress{background:var(--white);border-bottom:1px solid var(--border);padding:12px 24px}
+.tp-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px}
+.tp-title{font-size:12px;font-weight:700;color:var(--navy)}
+.tp-stats{display:flex;gap:16px;font-size:12px}
+.tp-done{color:var(--green);font-weight:700}
+.tp-miss{color:var(--red);font-weight:700}
+.tp-total{color:var(--muted)}
+.tp-track{height:20px;background:#F1F5F9;border-radius:10px;overflow:hidden;position:relative}
+.tp-fill{height:100%;background:linear-gradient(90deg,#16A34A,#22c55e);border-radius:10px;transition:width .6s ease;min-width:0}
+.tp-fill-miss{height:100%;background:#fee2e2;position:absolute;top:0;right:0;border-radius:0 10px 10px 0}
+.tp-label-inside{position:absolute;top:50%;transform:translateY(-50%);left:50%;transform:translate(-50%,-50%);font-size:11px;font-weight:700;color:var(--navy);white-space:nowrap;pointer-events:none;top:50%}
+.tp-pct-row{display:flex;justify-content:space-between;margin-top:5px;font-size:11px}
+.tp-pct-done{color:var(--green);font-weight:700}
+.tp-pct-miss{color:var(--red);font-weight:700}
+.tp-skeleton{height:20px;border-radius:10px}
 </style>
 </head>
 <body>
@@ -114,6 +143,21 @@ td{padding:9px 12px;font-size:13px;color:var(--navy);vertical-align:middle}
   <div class="hd-badge" id="badge">&#9888; ยังไม่ได้โหลดไฟล์</div>
 </div>
 
+<div class="gist-panel" id="gistPanel">
+  <span style="font-size:12px;font-weight:700;color:var(--navy);white-space:nowrap">☁️ Gist Sync</span>
+  <select id="gistMode" onchange="onModeChange()" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-family:'Noto Sans Thai',sans-serif;font-size:12px;color:var(--navy);outline:none;cursor:pointer">
+    <option value="off">⬜ ปิด Sync</option>
+    <option value="sender">🖥 เครื่อง X (อัปโหลด)</option>
+    <option value="receiver">📺 เครื่อง Y (รับข้อมูล)</option>
+  </select>
+  <input type="text" id="gistId" placeholder="Gist ID (32 ตัวอักษร)" style="min-width:230px;flex:1" oninput="saveConfig()">
+  <input type="password" id="gistToken" placeholder="GitHub Token (ghp_...)" style="min-width:200px;flex:1" oninput="saveConfig()">
+  <span id="gistStatus" class="gist-status">ปิดอยู่</span>
+</div>
+
+<div class="receiver-hint" id="receiverHint">
+  📺 <b>เครื่อง Y:</b> ข้อมูล BOM/Production มาจาก Gist อัตโนมัติ — ลาก <b>Picture File</b> ด้านขวาเพื่อดูรูปภาพได้เลย
+</div>
 <div class="upload-bar">
   <div class="uslot" id="sl1" ondragover="dov(event,'sl1')" ondragleave="dol('sl1')" ondrop="ddr(event,'sl1','fi1')">
     <input type="file" id="fi1" accept=".xlsx,.xls" onchange="onFile(this,'sl1','fi1')">
@@ -150,6 +194,24 @@ td{padding:9px 12px;font-size:13px;color:var(--navy);vertical-align:middle}
   <div class="card"><div class="card-lbl">In Process</div><div class="card-val cv-blue" id="sv4"><span class="sk sk-val"></span></div></div>
   <div class="card"><div class="card-lbl">Released</div><div class="card-val cv-green" id="sv5"><span class="sk sk-val"></span></div></div>
   <div class="card"><div class="card-lbl">Production Rows</div><div class="card-val cv-navy" id="sv6"><span class="sk sk-val"></span></div></div>
+</div>
+
+<div class="time-progress" id="timeProgressBar">
+  <div class="tp-header">
+    <span class="tp-title">⏱ ความคืบหน้าการกรอก Machine Time (ระดับ Operation)</span>
+    <div class="tp-stats">
+      <span class="tp-done">✅ มีเวลาแล้ว: <span id="tpDoneN">-</span> ops</span>
+      <span class="tp-miss">⬜ ยังขาด: <span id="tpMissN">-</span> ops</span>
+      <span class="tp-total">รวม: <span id="tpTotalN">-</span> ops</span>
+    </div>
+  </div>
+  <div class="tp-track" id="tpTrack">
+    <div class="tp-fill sk sk-val tp-skeleton" id="tpFill" style="width:0%"></div>
+  </div>
+  <div class="tp-pct-row">
+    <span class="tp-pct-done" id="tpPctDone">กรอกแล้ว —%</span>
+    <span class="tp-pct-miss" id="tpPctMiss">ยังขาด —%</span>
+  </div>
 </div>
 
 <div class="tab-bar">
@@ -433,9 +495,31 @@ function onFile(inp,slId,fiId){
   document.getElementById(slId).classList.add("ok");
   document.getElementById(fiId==="fi1"?"sb1":fiId==="fi2"?"sb2":"sb3").textContent=f.name;
   document.getElementById("btnGo").disabled=!(fBom&&fProd);
+  // receiver mode: ลากไฟล์รูปตรง slot3 -> โหลดทันทีโดยไม่ต้อง analyze()
+  if(GIST_MODE==="receiver"&&fiId==="fi3"&&fPic){
+    loadPicOnly(fPic);
+  }
+}
+
+async function loadPicOnly(file){
+  var ov=document.getElementById("ov");
+  document.getElementById("ovMsg").textContent="กำลังอ่านไฟล์รูปภาพ...";
+  ov.classList.add("open");
+  try{
+    IMG_MAP=await readPicXLSX(file);
+    var n=Object.keys(IMG_MAP).length;
+    showToast("✅ โหลดรูปภาพแล้ว "+n+" รายการ",5000);
+    document.getElementById("sb3").textContent=file.name+" ("+n+" รูป)";
+  }catch(err){
+    showToast("⚠️ อ่านไฟล์รูปไม่สำเร็จ: "+err.message,7000);
+  }
+  ov.classList.remove("open");
 }
 function doReset(){
-  fBom=null;fProd=null;fPic=null;IMG_MAP={};ROWS=[];
+  fBom=null;fProd=null;fPic=null;
+  // receiver mode: เก็บ IMG_MAP ไว้ (โหลดจาก Picture.xlsx บนเครื่องนี้)
+  if(GIST_MODE!=="receiver")IMG_MAP={};
+  ROWS=[];
   ["sl1","sl2","sl3"].forEach(function(id){document.getElementById(id).classList.remove("ok");});
   document.getElementById("sb1").textContent="คลิกหรือลากไฟล์ BOM .xlsx";
   document.getElementById("sb2").textContent="คลิกหรือลากไฟล์ Production .xlsx";
@@ -444,7 +528,7 @@ function doReset(){
   document.getElementById("btnGo").disabled=true;
   document.getElementById("badge").className="hd-badge";
   document.getElementById("badge").textContent="ยังไม่ได้โหลดไฟล์";
-  disF();resetCards();renderSkel();
+  disF();resetCards();resetTimeProgress();renderSkel();
 }
 
 async function analyze(){
@@ -481,6 +565,13 @@ async function analyze(){
     });
 
     var EXCL=["OS","QA"];
+    // ── คำนวณ Time Progress: นับทุก operation row (ไม่รวม OS/QA) ──
+    var allOpsExcl=bomRaw.filter(function(r){return EXCL.indexOf(String(r[BC.wc]||"").trim())<0;});
+    var tpTotal=allOpsExcl.length;
+    var tpMiss=allOpsExcl.filter(function(r){return isZeroTime(r[BC.tm]);}).length;
+    var tpDone=tpTotal-tpMiss;
+    updTimeProgress(tpDone,tpMiss,tpTotal);
+
     var bomFilt=bomRaw.filter(function(r){
       return EXCL.indexOf(String(r[BC.wc]||"").trim())<0 && isZeroTime(r[BC.tm]);
     });
@@ -540,7 +631,7 @@ async function analyze(){
 
     document.getElementById("badge").className="hd-badge ok";
     document.getElementById("badge").textContent="โหลดแล้ว "+new Date().toLocaleDateString("th-TH");
-    ov.classList.remove("open");applyF();
+    ov.classList.remove("open");applyF();pushGist();
   }catch(err){
     ov.classList.remove("open");
     showToast("&#10060; "+err.message,8000);
@@ -575,6 +666,29 @@ function updCards(){
 function resetCards(){
   ["sv1","sv2","sv3","sv4","sv5","sv6"].forEach(function(id){document.getElementById(id).innerHTML="<span class=\"sk sk-val\"></span>";});
   document.getElementById("cnt1").textContent="-";document.getElementById("cnt2").textContent="-";
+}
+function updTimeProgress(done,miss,total){
+  var pctDone=total>0?Math.round(done/total*100):0;
+  var pctMiss=total>0?(100-pctDone):0;
+  var fill=document.getElementById("tpFill");
+  fill.classList.remove("sk","sk-val","tp-skeleton");
+  fill.style.width=pctDone+"%";
+  fill.style.background=pctDone>=80?"linear-gradient(90deg,#16A34A,#22c55e)":pctDone>=50?"linear-gradient(90deg,#E8A020,#f59e0b)":"linear-gradient(90deg,#DC2626,#f87171)";
+  document.getElementById("tpDoneN").textContent=done.toLocaleString();
+  document.getElementById("tpMissN").textContent=miss.toLocaleString();
+  document.getElementById("tpTotalN").textContent=total.toLocaleString();
+  document.getElementById("tpPctDone").textContent="กรอกแล้ว "+pctDone+"%";
+  document.getElementById("tpPctMiss").textContent="ยังขาด "+pctMiss+"%";
+}
+function resetTimeProgress(){
+  var fill=document.getElementById("tpFill");
+  fill.className="tp-fill sk sk-val tp-skeleton";
+  fill.style.width="0%";
+  document.getElementById("tpDoneN").textContent="-";
+  document.getElementById("tpMissN").textContent="-";
+  document.getElementById("tpTotalN").textContent="-";
+  document.getElementById("tpPctDone").textContent="กรอกแล้ว —%";
+  document.getElementById("tpPctMiss").textContent="ยังขาด —%";
 }
 function enF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=false;});}
 function disF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=true;});}
@@ -658,6 +772,122 @@ function showDet(idx){
   document.getElementById("mbg").classList.add("open");
 }
 function closeMod(e){if(!e||e.target===document.getElementById("mbg"))document.getElementById("mbg").classList.remove("open");}
+
+// ─── GitHub Gist Sync ───────────────────────────────────────────────
+var GIST_MODE="off";
+var GIST_ID="";
+var GIST_TOKEN="";
+var GIST_TIMER=null;
+var GIST_LAST_ETAG="";
+
+function saveConfig(){
+  GIST_ID=(document.getElementById("gistId").value||"").trim();
+  GIST_TOKEN=(document.getElementById("gistToken").value||"").trim();
+  try{localStorage.setItem("saha_gist_id",GIST_ID);localStorage.setItem("saha_gist_token",GIST_TOKEN);}catch(e){}
+}
+function loadConfig(){
+  try{
+    var id=localStorage.getItem("saha_gist_id")||"";
+    var tok=localStorage.getItem("saha_gist_token")||"";
+    if(id)document.getElementById("gistId").value=id;
+    if(tok)document.getElementById("gistToken").value=tok;
+    GIST_ID=id;GIST_TOKEN=tok;
+  }catch(e){}
+}
+function onModeChange(){
+  GIST_MODE=document.getElementById("gistMode").value;
+  if(GIST_TIMER){clearInterval(GIST_TIMER);GIST_TIMER=null;}
+  saveConfig();
+  var st=document.getElementById("gistStatus");
+  document.body.classList.remove("mode-receiver");
+  if(GIST_MODE==="off"){st.className="gist-status";st.textContent="ปิดอยู่";}
+  else if(GIST_MODE==="sender"){st.className="gist-status";st.textContent="🖥 โหมดส่ง — โหลดไฟล์แล้ววิเคราะห์เพื่ออัปโหลด";}
+  else if(GIST_MODE==="receiver"){
+    st.className="gist-status";st.textContent="📺 รอรับข้อมูล...";
+    document.body.classList.add("mode-receiver");
+    GIST_TIMER=setInterval(pollGist,30000);
+    pollGist();
+  }
+}
+
+async function pushGist(){
+  if(GIST_MODE!=="sender")return;
+  var id=(document.getElementById("gistId").value||"").trim();
+  var tok=(document.getElementById("gistToken").value||"").trim();
+  if(!id||!tok){showToast("⚠️ กรุณากรอก Gist ID และ GitHub Token",5000);return;}
+  var st=document.getElementById("gistStatus");
+  st.className="gist-status";st.textContent="☁️ กำลังอัปโหลดข้อมูล...";
+  // แยก rows และ IMG_MAP เป็น 2 ไฟล์ใน Gist เดียวกัน
+  var dataPayload={ts:Date.now(),rows:ROWS};
+  var files={"delivery_data.json":{content:JSON.stringify(dataPayload)}};
+  // รูปภาพ: แบ่งเป็น chunks เพื่อหลีกเลี่ยง Gist 1MB limit
+  var imgKeys=Object.keys(IMG_MAP);
+  if(imgKeys.length>0){
+    // chunk ทีละ 20 รูปต่อไฟล์
+    var CHUNK=20;
+    for(var ci=0;ci*CHUNK<imgKeys.length;ci++){
+      var chunk={};
+      imgKeys.slice(ci*CHUNK,(ci+1)*CHUNK).forEach(function(k){chunk[k]=IMG_MAP[k];});
+      files["delivery_img_"+ci+".json"]={content:JSON.stringify(chunk)};
+    }
+    files["delivery_img_meta.json"]={content:JSON.stringify({chunks:Math.ceil(imgKeys.length/CHUNK),ts:Date.now()})};
+  }
+  var body=JSON.stringify({files:files});
+  try{
+    var res=await fetch("https://api.github.com/gists/"+id,{
+      method:"PATCH",
+      headers:{"Authorization":"token "+tok,"Content-Type":"application/json","Accept":"application/vnd.github.v3+json"},
+      body:body
+    });
+    if(res.ok){
+      var imgInfo=imgKeys.length>0?" + "+imgKeys.length+" รูป":"";
+      st.className="gist-status ok";st.textContent="☁️ ส่งแล้ว"+imgInfo+" | "+new Date().toLocaleTimeString("th-TH");
+    }else{
+      var err=await res.json().catch(function(){return{};});
+      st.className="gist-status err";st.textContent="❌ HTTP "+res.status+(err.message?" — "+err.message:"");
+    }
+  }catch(ex){
+    st.className="gist-status err";st.textContent="❌ Network error: "+ex.message;
+  }
+}
+
+async function pollGist(){
+  var id=(document.getElementById("gistId").value||"").trim();
+  var tok=(document.getElementById("gistToken").value||"").trim();
+  if(!id){return;}
+  var st=document.getElementById("gistStatus");
+  try{
+    var headers={"Accept":"application/vnd.github.v3+json"};
+    if(tok)headers["Authorization"]="token "+tok;
+    if(GIST_LAST_ETAG)headers["If-None-Match"]=GIST_LAST_ETAG;
+    var res=await fetch("https://api.github.com/gists/"+id,{headers:headers});
+    if(res.status===304){st.className="gist-status ok";st.textContent="📺 ไม่มีการเปลี่ยนแปลง";return;}
+    if(!res.ok){st.className="gist-status err";st.textContent="❌ HTTP "+res.status;return;}
+    var etag=res.headers.get("ETag");
+    if(etag)GIST_LAST_ETAG=etag;
+    var data=await res.json();
+    var file=data.files&&data.files["delivery_data.json"];
+    if(!file){st.className="gist-status err";st.textContent="❌ ไม่พบ delivery_data.json ใน Gist";return;}
+    var raw=file.content;
+    var payload=JSON.parse(raw);
+    if(!payload.rows||!payload.rows.length){st.className="gist-status err";st.textContent="❌ ไม่พบ data ใน Gist (เครื่อง X ยังไม่ได้ส่ง)";return;}
+    ROWS=payload.rows;
+    buildOpts();updCards();enF();
+    document.getElementById("badge").className="hd-badge ok";
+    document.getElementById("badge").textContent="Gist sync "+new Date().toLocaleTimeString("th-TH");
+    // รูปภาพ: เครื่อง Y โหลด Picture.xlsx เองได้เลย (IMG_MAP ไม่ถูกล้าง)
+    var imgCount=Object.keys(IMG_MAP).length;
+    var imgNote=imgCount>0?" + รูป "+imgCount+" รายการ":" (ยังไม่มีรูป — ลาก Picture.xlsx ได้เลย)";
+    st.className="gist-status ok";st.textContent="✅ รับแล้ว "+ROWS.length+" แถว"+imgNote+" | "+new Date().toLocaleTimeString("th-TH");
+    applyF();
+  }catch(ex){
+    st.className="gist-status err";st.textContent="❌ "+ex.message;
+  }
+}
+// โหลด config เมื่อหน้าพร้อม
+window.addEventListener("load",loadConfig);
+// ─────────────────────────────────────────────────────────────────────
+
 renderSkel();
 </script>
 
