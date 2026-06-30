@@ -92,6 +92,8 @@ td{padding:9px 12px;font-size:13px;color:var(--navy);vertical-align:middle}
 .otbl tr:last-child td{border:none}
 .otbl tr.hl-zero td{background:#fff3cd;font-weight:600}
 .otbl tr.hl-zero .wc{background:#dc3545;color:#fff}
+.otbl tr.hl-muted td{background:#f8fafc;color:#9ca3af}
+.otbl tr.hl-muted .wc,.wc.wc-muted{background:#e5e7eb;color:#9ca3af}
 .ov{display:none;position:fixed;inset:0;background:rgba(255,255,255,.9);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:16px}
 .ov.open{display:flex}
 .spin{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}
@@ -276,6 +278,7 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
 <div class="tab-bar">
   <div class="tab active" id="tab1" onclick="setTab(1)">ตรงกับ Production <span class="cnt" id="cnt1">-</span></div>
   <div class="tab" id="tab2" onclick="setTab(2)">BOM ไม่มีเวลาทั้งหมด <span class="cnt" id="cnt2">-</span></div>
+  <div class="tab" id="tab3" onclick="setTab(3)">BOM ทั้งหมด <span class="cnt" id="cnt3">-</span></div>
 </div>
 
 <div class="filter-bar" id="fb1">
@@ -297,6 +300,15 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
   <select id="f2p" onchange="applyF()" disabled><option value="">ทุก Inv. Prefix</option></select>
   <select id="f2m" onchange="applyF()" disabled><option value="">ตรง/ไม่ตรง Production</option><option value="1">ตรงกับ Production</option><option value="0">ยังไม่มีใน Production</option></select>
   <button class="btn-clr" onclick="clrF(2)">ล้าง</button>
+</div>
+
+<div class="filter-bar" id="fb3" style="display:none">
+  <input type="text" id="q3" placeholder="ค้นหา Inv. ID, BOM ID, Description..." oninput="applyF()">
+  <select id="f3w" onchange="applyF()" disabled><option value="">ทุก Work Center</option></select>
+  <select id="f3b" onchange="applyF()" disabled><option value="">ทุก BOM ID</option></select>
+  <select id="f3p" onchange="applyF()" disabled><option value="">ทุก Inv. Prefix</option></select>
+  <select id="f3m" onchange="applyF()" disabled><option value="">ตรง/ไม่ตรง Production</option><option value="1">ตรงกับ Production</option><option value="0">ยังไม่มีใน Production</option></select>
+  <button class="btn-clr" onclick="clrF(3)">ล้าง</button>
 </div>
 
 <div class="tbl-wrap">
@@ -322,6 +334,16 @@ body.mode-receiver #sl3{border-color:var(--blue);background:#f0f8ff}
       <th>Production Nbr.</th>
       <th onclick="srt('status')">Status <span class="si">&#8597;</span></th>
     </tr></thead>
+    <thead id="th3" style="display:none"><tr>
+      <th style="width:36px">#</th>
+      <th onclick="srt('inv_id')">Inventory ID <span class="si">&#8597;</span></th>
+      <th onclick="srt('bom_id')">BOM ID <span class="si">&#8597;</span></th>
+      <th>BOM Description</th>
+      <th>Work Center</th>
+      <th onclick="srt('matched')">Production Match <span class="si">&#8597;</span></th>
+      <th>Production Nbr.</th>
+      <th onclick="srt('status')">Status <span class="si">&#8597;</span></th>
+    </tr></thead>
     <tbody id="tbody"></tbody>
   </table>
 </div>
@@ -342,7 +364,7 @@ var SEED_CUSTS=["บริษัท กาญจนาโลหะการ จ�
 var SEED_BOMIDS=["BOM00006", "BOM00013", "BOM00015", "BOM00018", "BOM00031", "BOM00032", "BOM00041", "BOM00090", "BOM00095", "BOM00153", "BOM00160", "BOM00166", "BOM00343", "BOM00379", "BOM00380", "BOM00384", "BOM00387", "BOM00392", "BOM00394", "BOM00398", "BOM00400", "BOM00401", "BOM00402", "BOM00403", "BOM00404", "BOM00405", "BOM00406", "BOM00419", "BOM00452", "BOM00453", "BOM00454", "BOM00455", "BOM00456", "BOM00458", "BOM00459", "BOM00461", "BOM00462", "BOM00472", "BOM00474", "BOM00475", "BOM00476", "BOM00477", "BOM00478", "BOM00479", "BOM00506", "BOM00507", "BOM00508", "BOM00509", "BOM00510", "BOM00511", "BOM00512", "BOM00514", "BOM00516", "BOM00518", "BOM00519", "BOM00520", "BOM00521", "BOM00522", "BOM00523", "BOM00524", "BOM00525", "BOM00526", "BOM00527", "BOM00530", "BOM00531", "BOM00532", "BOM00533", "BOM00539", "BOM00545", "BOM00549", "BOM00574", "BOM00575", "BOM00576", "BOM00589", "BOM00590", "BOM00591", "BOM00592", "BOM00594", "BOM00595", "BOM00596", "BOM00597", "BOM00599", "BOM00600", "BOM00601", "BOM00602", "BOM00603", "BOM00604", "BOM00613", "BOM00614", "BOM00615", "BOM00616", "BOM00617", "BOM00619", "BOM00620", "BOM00621", "BOM00626", "BOM00627", "BOM00630", "BOM00633", "BOM00635", "BOM00636", "BOM00637", "BOM00638", "BOM00639", "BOM00640", "BOM00642", "BOM00643", "BOM00649", "BOM00652", "BOM00653", "BOM00654", "BOM00655", "BOM00657", "BOM00659", "BOM00660", "BOM00661", "BOM00662", "BOM00663", "BOM00664", "BOM00665", "BOM00666", "BOM00668", "BOM00669", "BOM00670", "BOM00673", "BOM00674", "BOM00676", "BOM00677", "BOM00683", "BOM00684", "BOM00685", "BOM00687", "BOM00688", "BOM00689", "BOM00690", "BOM00692", "BOM00693", "BOM00694", "BOM00695", "BOM00696", "BOM00697", "BOM00698", "BOM00699", "BOM00700", "BOM00701", "BOM00702", "BOM00703", "BOM00704", "BOM00705", "BOM00706", "BOM00707", "BOM00708", "BOM00709", "BOM00710", "BOM00711", "BOM00712", "BOM00713", "BOM00714", "BOM00721", "BOM00722", "BOM00723", "BOM00724", "BOM00725", "BOM00727", "BOM00728", "BOM00729", "BOM00731"];
 var SEED_PREFIXES=["FGPDAU", "FGPDGL", "SMPDGL", "SVGLTM"];
 
-var ROWS=[],filtered=[],curTab=1,sortKey="",sortDir=1,curPage=1,PG=30;
+var ROWS=[],ROWS_ALL=[],filtered=[],curTab=1,sortKey="",sortDir=1,curPage=1,PG=30;
 var fBom=null,fProd=null,fPic=null;
 var IMG_MAP={};
 
@@ -578,7 +600,7 @@ function doReset(){
   fBom=null;fProd=null;fPic=null;
   // receiver mode: เก็บ IMG_MAP ไว้ (โหลดจาก Picture.xlsx บนเครื่องนี้)
   if(GIST_MODE!=="receiver")IMG_MAP={};
-  ROWS=[];
+  ROWS=[];ROWS_ALL=[];
   ["sl1","sl2","sl3"].forEach(function(id){document.getElementById(id).classList.remove("ok");});
   document.getElementById("sb1").textContent="คลิกหรือลากไฟล์ BOM .xlsx";
   document.getElementById("sb2").textContent="คลิกหรือลากไฟล์ Production .xlsx";
@@ -657,11 +679,11 @@ async function analyze(){
     bomFilt.forEach(function(r){
       var inv=String(r[BC.inv]||"").trim();if(!inv||inv==="undefined")return;
       if(!byInv[inv])byInv[inv]={bid:String(r[BC.id]||"").trim(),bdesc:String(r[BC.desc]||"").trim(),ops:[],allOps:[]};
-      byInv[inv].ops.push({op:String(r[BC.op]||"").trim(),wc:String(r[BC.wc]||"").trim(),desc:String(r[BC.od]||"").trim()});
+      byInv[inv].ops.push({op:String(r[BC.op]||"").trim(),wc:String(r[BC.wc]||"").trim(),desc:String(r[BC.od]||"").trim(),tm:String(r[BC.tm]||"").trim()});
     });
     bomRaw.forEach(function(r){
       var inv=String(r[BC.inv]||"").trim();if(!inv||inv==="undefined"||!byInv[inv])return;
-      byInv[inv].allOps.push({op:String(r[BC.op]||"").trim(),wc:String(r[BC.wc]||"").trim(),desc:String(r[BC.od]||"").trim(),zero:isZeroTime(r[BC.tm])&&EXCL.indexOf(String(r[BC.wc]||"").trim())<0});
+      byInv[inv].allOps.push({op:String(r[BC.op]||"").trim(),wc:String(r[BC.wc]||"").trim(),desc:String(r[BC.od]||"").trim(),tm:String(r[BC.tm]||"").trim(),zero:isZeroTime(r[BC.tm])&&EXCL.indexOf(String(r[BC.wc]||"").trim())<0});
     });
 
     var prodIdx={};
@@ -692,7 +714,37 @@ async function analyze(){
     });
 
     if(!rows.length)throw new Error("ไม่พบข้อมูลหลังวิเคราะห์\nตรวจสอบว่าไม่สลับไฟล์");
-    ROWS=rows;buildOpts();updCards();enF();
+    ROWS=rows;
+
+    // ── สร้าง ROWS_ALL: BOM ทั้งหมดในไฟล์ ไม่ว่าจะกรอกเวลาครบหรือไม่ ──
+    var byInvAll={};
+    bomRaw.forEach(function(r){
+      var inv=String(r[BC.inv]||"").trim();if(!inv||inv==="undefined")return;
+      if(!byInvAll[inv])byInvAll[inv]={bid:String(r[BC.id]||"").trim(),bdesc:String(r[BC.desc]||"").trim(),allOps:[]};
+      byInvAll[inv].allOps.push({op:String(r[BC.op]||"").trim(),wc:String(r[BC.wc]||"").trim(),desc:String(r[BC.od]||"").trim(),tm:String(r[BC.tm]||"").trim(),zero:isZeroTime(r[BC.tm])&&EXCL.indexOf(String(r[BC.wc]||"").trim())<0});
+    });
+    var rowsAll=[];
+    Object.keys(byInvAll).forEach(function(inv){
+      var b=byInvAll[inv],ps=prodIdx[inv]||[];
+      var wcs=[];b.allOps.forEach(function(o){if(wcs.indexOf(o.wc)<0)wcs.push(o.wc);});
+      if(ps.length){
+        ps.forEach(function(p){
+          var iso=toIso(p[PC.ed]);
+          rowsAll.push({inv_id:inv,bom_id:b.bid,bom_desc:b.bdesc,
+            prod_nbr:String(p[PC.nbr]||"").trim(),prod_desc:String(p[PC.desc]||"").trim(),
+            status:String(p[PC.st]||"").trim(),end_date:iso,ef:fmtD(iso),
+            customer:String(p[PC.cu]||"").trim(),qty_to_produce:String(p[PC.qty]||"").trim(),
+            last_mod:String(p[PC.lm]||"").trim(),ops:b.allOps,allOps:b.allOps,wcs:wcs,matched:true});
+        });
+      }else{
+        rowsAll.push({inv_id:inv,bom_id:b.bid,bom_desc:b.bdesc,
+          prod_nbr:"",prod_desc:"",status:"",end_date:"",ef:"",
+          customer:"",ops:b.allOps,allOps:b.allOps,wcs:wcs,matched:false});
+      }
+    });
+    ROWS_ALL=rowsAll;
+
+    buildOpts();updCards();enF();
 
     IMG_MAP={};
     if(fPic){
@@ -716,18 +768,26 @@ async function analyze(){
 
 function buildOpts(){
   var wcs=[],custs=[],boms=[],pfx=[];
+  var wcsAll=[],bomsAll=[],pfxAll=[];
   ROWS.forEach(function(r){
     r.wcs.forEach(function(w){if(wcs.indexOf(w)<0)wcs.push(w);});
     if(r.customer&&custs.indexOf(r.customer)<0)custs.push(r.customer);
     if(boms.indexOf(r.bom_id)<0)boms.push(r.bom_id);
     var p=r.inv_id.substring(0,6);if(pfx.indexOf(p)<0)pfx.push(p);
   });
+  ROWS_ALL.forEach(function(r){
+    r.wcs.forEach(function(w){if(wcsAll.indexOf(w)<0)wcsAll.push(w);});
+    if(bomsAll.indexOf(r.bom_id)<0)bomsAll.push(r.bom_id);
+    var p=r.inv_id.substring(0,6);if(pfxAll.indexOf(p)<0)pfxAll.push(p);
+  });
   wcs.sort();custs.sort();boms.sort();pfx.sort();
+  wcsAll.sort();bomsAll.sort();pfxAll.sort();
   function fill(id,opts){
     var el=document.getElementById(id),f=el.options[0].outerHTML;
     el.innerHTML=f+opts.map(function(v){return"<option value=\""+v+"\">"+v+"</option>";}).join("");
   }
   fill("f1w",wcs);fill("f2w",wcs);fill("f1c",custs);fill("f2b",boms);fill("f2p",pfx);
+  fill("f3w",wcsAll);fill("f3b",bomsAll);fill("f3p",pfxAll);
 }
 function updCards(){
   function sv(id,v){document.getElementById(id).textContent=v;}
@@ -737,11 +797,11 @@ function updCards(){
   sv("sv4",ROWS.filter(function(r){return r.status==="In Process";}).length);
   sv("sv5",ROWS.filter(function(r){return r.status==="Released";}).length);
   var mr=ROWS.filter(function(r){return r.matched;}).length;
-  sv("sv6",mr);document.getElementById("cnt1").textContent=mr;document.getElementById("cnt2").textContent=ROWS.length;
+  sv("sv6",mr);document.getElementById("cnt1").textContent=mr;document.getElementById("cnt2").textContent=ROWS.length;document.getElementById("cnt3").textContent=ROWS_ALL.length;
 }
 function resetCards(){
   ["sv1","sv2","sv3","sv4","sv5","sv6"].forEach(function(id){document.getElementById(id).innerHTML="<span class=\"sk sk-val\"></span>";});
-  document.getElementById("cnt1").textContent="-";document.getElementById("cnt2").textContent="-";
+  document.getElementById("cnt1").textContent="-";document.getElementById("cnt2").textContent="-";document.getElementById("cnt3").textContent="-";
 }
 function updTimeProgress(done,miss,total){
   var pctDone=total>0?Math.round(done/total*100):0;
@@ -839,10 +899,10 @@ function closeImgPopup(e){
   if(!e||e.target===document.getElementById("imgPopupBg"))
     document.getElementById("imgPopupBg").classList.remove("open");
 }
-function enF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=false;});}
-function disF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=true;});}
+function enF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m","f3w","f3b","f3p","f3m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=false;});}
+function disF(){["f1s","f1w","f1c","f1df","f1dt","f2w","f2b","f2p","f2m","f3w","f3b","f3p","f3m"].forEach(function(id){var e=document.getElementById(id);if(e)e.disabled=true;});}
 function setTab(t){
-  curTab=t;[1,2].forEach(function(n){
+  curTab=t;[1,2,3].forEach(function(n){
     document.getElementById("tab"+n).classList.toggle("active",n===t);
     document.getElementById("fb"+n).style.display=n===t?"flex":"none";
     document.getElementById("th"+n).style.display=n===t?"":"none";
@@ -851,7 +911,7 @@ function setTab(t){
 }
 function applyF(){
   if(!ROWS.length){renderSkel();return;}
-  var base=curTab===1?ROWS.filter(function(r){return r.matched;}):ROWS;
+  var base=curTab===1?ROWS.filter(function(r){return r.matched;}):(curTab===2?ROWS:ROWS_ALL);
   if(curTab===1){
     var q=(document.getElementById("q1").value||"").toLowerCase(),st=document.getElementById("f1s").value,
         wc=document.getElementById("f1w").value,cu=document.getElementById("f1c").value,
@@ -862,7 +922,7 @@ function applyF(){
       if(cu&&r.customer!==cu)return false;if(df&&r.end_date&&r.end_date<df)return false;
       if(dt&&r.end_date&&r.end_date>dt)return false;return true;
     });
-  }else{
+  }else if(curTab===2){
     var q2=(document.getElementById("q2").value||"").toLowerCase(),wc2=document.getElementById("f2w").value,
         bi=document.getElementById("f2b").value,px=document.getElementById("f2p").value,mt=document.getElementById("f2m").value;
     base=base.filter(function(r){
@@ -871,17 +931,27 @@ function applyF(){
       if(px&&r.inv_id.indexOf(px)!==0)return false;if(mt==="1"&&!r.matched)return false;
       if(mt==="0"&&r.matched)return false;return true;
     });
+  }else{
+    var q3=(document.getElementById("q3").value||"").toLowerCase(),wc3=document.getElementById("f3w").value,
+        bi3=document.getElementById("f3b").value,px3=document.getElementById("f3p").value,mt3=document.getElementById("f3m").value;
+    base=base.filter(function(r){
+      if(q3&&![r.inv_id,r.bom_id,r.bom_desc].some(function(v){return v.toLowerCase().indexOf(q3)>=0;}))return false;
+      if(wc3&&r.wcs.indexOf(wc3)<0)return false;if(bi3&&r.bom_id!==bi3)return false;
+      if(px3&&r.inv_id.indexOf(px3)!==0)return false;if(mt3==="1"&&!r.matched)return false;
+      if(mt3==="0"&&r.matched)return false;return true;
+    });
   }
   if(sortKey){base=base.slice().sort(function(a,b){var av=a[sortKey]||"",bv=b[sortKey]||"";return av<bv?-sortDir:av>bv?sortDir:0;});}
   filtered=base;curPage=1;render();
 }
 function clrF(t){
   if(t===1){document.getElementById("q1").value="";["f1s","f1w","f1c"].forEach(function(id){document.getElementById(id).selectedIndex=0;});document.getElementById("f1df").value="";document.getElementById("f1dt").value="";}
-  else{document.getElementById("q2").value="";["f2w","f2b","f2p","f2m"].forEach(function(id){document.getElementById(id).selectedIndex=0;});}
+  else if(t===2){document.getElementById("q2").value="";["f2w","f2b","f2p","f2m"].forEach(function(id){document.getElementById(id).selectedIndex=0;});}
+  else{document.getElementById("q3").value="";["f3w","f3b","f3p","f3m"].forEach(function(id){document.getElementById(id).selectedIndex=0;});}
   applyF();
 }
 function srt(k){if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=1;}applyF();}
-function wcc(wcs){return wcs.map(function(w){return"<span class=\"wc\">"+w+"</span>";}).join("");}
+function wcc(wcs){var EXCL_WC=["QA","OS"];return wcs.map(function(w){var cls=EXCL_WC.indexOf(w)>=0?"wc wc-muted":"wc";return"<span class=\""+cls+"\">"+w+"</span>";}).join("");}
 function stB(s){
   if(s==="In Process")return"<span class=\"badge b-blue\">In Process</span>";
   if(s==="Released")return"<span class=\"badge b-gray\">Released</span>";return"-";
@@ -896,7 +966,7 @@ function render(){
   if(!page.length){tb.innerHTML="<tr><td colspan=\""+cols+"\" class=\"no-data\">ไม่พบข้อมูล</td></tr>";document.getElementById("pager").innerHTML="";return;}
   var h="";
   if(curTab===1){page.forEach(function(r,i){h+="<tr onclick=\"showDet("+ROWS.indexOf(r)+")\">"+"<td style=\"color:var(--light);font-size:11px\">"+(s+i+1)+"</td>"+"<td style=\"font-weight:700;color:var(--blue);white-space:nowrap;font-size:12px\">"+r.inv_id+"</td>"+"<td style=\"font-size:12px;white-space:nowrap\">"+r.bom_id+"</td>"+"<td style=\"max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px\" title=\""+r.bom_desc+"\">"+r.bom_desc+"</td>"+"<td style=\"font-weight:600;font-size:12px;white-space:nowrap\">"+r.prod_nbr+"</td>"+"<td>"+stB(r.status)+"</td>"+"<td style=\"font-size:12px;white-space:nowrap\">"+r.ef+"</td>"+"<td style=\"font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\" title=\""+r.customer+"\">"+(r.customer||"-")+"</td>"+"<td>"+wcc(r.wcs)+"</td>"+"</tr>";});}
-  else{page.forEach(function(r,i){h+="<tr onclick=\"showDet("+ROWS.indexOf(r)+")\">"+"<td style=\"color:var(--light);font-size:11px\">"+(s+i+1)+"</td>"+"<td style=\"font-weight:700;color:var(--blue);white-space:nowrap;font-size:12px\">"+r.inv_id+"</td>"+"<td style=\"font-size:12px;white-space:nowrap\">"+r.bom_id+"</td>"+"<td style=\"max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px\" title=\""+r.bom_desc+"\">"+r.bom_desc+"</td>"+"<td>"+wcc(r.wcs)+"</td>"+"<td>"+(r.matched?"<span class=\"badge b-red\">มีใน Production</span>":"<span class=\"badge b-gray\">ยังไม่มี</span>")+"</td>"+"<td style=\"font-size:12px\">"+(r.prod_nbr||"-")+"</td>"+"<td>"+stB(r.status)+"</td>"+"</tr>";});}
+  else{var srcArr=curTab===3?ROWS_ALL:ROWS;page.forEach(function(r,i){h+="<tr onclick=\"showDet("+srcArr.indexOf(r)+(curTab===3?",ROWS_ALL":"")+")\">"+"<td style=\"color:var(--light);font-size:11px\">"+(s+i+1)+"</td>"+"<td style=\"font-weight:700;color:var(--blue);white-space:nowrap;font-size:12px\">"+r.inv_id+"</td>"+"<td style=\"font-size:12px;white-space:nowrap\">"+r.bom_id+"</td>"+"<td style=\"max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px\" title=\""+r.bom_desc+"\">"+r.bom_desc+"</td>"+"<td>"+wcc(r.wcs)+"</td>"+"<td>"+(r.matched?"<span class=\"badge b-red\">มีใน Production</span>":"<span class=\"badge b-gray\">ยังไม่มี</span>")+"</td>"+"<td style=\"font-size:12px\">"+(r.prod_nbr||"-")+"</td>"+"<td>"+stB(r.status)+"</td>"+"</tr>";});}
   tb.innerHTML=h;renderPager();
 }
 function renderPager(){
@@ -908,16 +978,17 @@ function renderPager(){
   p.innerHTML=h;
 }
 function gp(n){curPage=n;render();window.scrollTo(0,0);}
-function showDet(idx){
-  var r=ROWS[idx];if(!r)return;
-  var sortedOps=(r.allOps||r.ops).slice().sort(function(a,b){return(parseInt(a.op,10)||0)-(parseInt(b.op,10)||0);});var ops=sortedOps.map(function(o){var hl=o.zero?' class="hl-zero"':'';return"<tr"+hl+"><td>"+o.op+"</td><td><span class=\"wc\">"+o.wc+"</span></td><td>"+o.desc+"</td></tr>";}).join("");
+function showDet(idx,src){
+  var r=(src||ROWS)[idx];if(!r)return;
+  var EXCL_WC=["QA","OS"];
+  var sortedOps=(r.allOps||r.ops).slice().sort(function(a,b){return(parseInt(a.op,10)||0)-(parseInt(b.op,10)||0);});var ops=sortedOps.map(function(o){var isExcl=EXCL_WC.indexOf(o.wc)>=0;var hl=isExcl?' class="hl-muted"':(o.zero?' class="hl-zero"':'');var tmCell=o.zero?'<span style="color:var(--red,#DC2626);font-weight:600">ยังไม่กรอก</span>':(o.tm||"-");return"<tr"+hl+"><td>"+o.op+"</td><td><span class=\"wc\">"+o.wc+"</span></td><td>"+o.desc+"</td><td>"+tmCell+"</td></tr>";}).join("");
   document.getElementById("mTtl").textContent=r.inv_id+" - "+r.bom_id;
   var pic=IMG_MAP[r.inv_id];
   var picHtml=pic?"<div class=\"pic-wrap\"><div class=\"pic-box\"><img src=\""+pic+"\" alt=\"\"></div></div>":"";
   var ph=r.matched
     ?"<div class=\"ii\"><label>Production Nbr.</label><span style=\"color:var(--blue);font-weight:700\">"+r.prod_nbr+"</span></div><div class=\"ii\"><label>Status</label><span>"+stB(r.status)+"</span></div><div class=\"ii\"><label>End Date</label><span>"+r.ef+"</span></div><div class=\"ii\"><label>Last Modified On</label><span>"+(r.last_mod||"-")+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>Customer</label><span style=\"font-size:12px\">"+(r.customer||"-")+"</span></div><div class=\"ii\" style=\"grid-column:span 1\"><label>Order Description</label><span style=\"font-size:12px\">"+r.prod_desc+"</span></div><div class=\"ii\"><label>Qty. to Produce</label><span style=\"font-weight:700;color:var(--navy)\">"+( r.qty_to_produce ? Number(String(r.qty_to_produce).replace(/,/g,"")).toLocaleString()+" EA" : "-")+"</span></div>"
     :"<div class=\"ii\" style=\"grid-column:span 2\"><label>Production</label><span style=\"color:var(--orange)\">ยังไม่มีใน Production Order</span></div>";
-  document.getElementById("mBd").innerHTML=picHtml+"<div class=\"ig\"><div class=\"ii\"><label>Inventory ID</label><span>"+r.inv_id+"</span></div><div class=\"ii\"><label>BOM ID</label><span>"+r.bom_id+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>BOM Description</label><span>"+r.bom_desc+"</span></div>"+ph+"</div><div class=\"dvd\"></div><div class=\"ops-ttl\">Operations ที่ยังไม่กรอกเวลา ("+r.ops.length+" รายการ)</div><table class=\"otbl\"><thead><tr><th>Op</th><th>Work Center</th><th>Description</th></tr></thead><tbody>"+ops+"</tbody></table>";
+  document.getElementById("mBd").innerHTML=picHtml+"<div class=\"ig\"><div class=\"ii\"><label>Inventory ID</label><span>"+r.inv_id+"</span></div><div class=\"ii\"><label>BOM ID</label><span>"+r.bom_id+"</span></div><div class=\"ii\" style=\"grid-column:span 2\"><label>BOM Description</label><span>"+r.bom_desc+"</span></div>"+ph+"</div><div class=\"dvd\"></div><div class=\"ops-ttl\">Operations ที่ยังไม่กรอกเวลา ("+r.ops.length+" รายการ)</div><table class=\"otbl\"><thead><tr><th>Op</th><th>Work Center</th><th>Description</th><th>Machine Time</th></tr></thead><tbody>"+ops+"</tbody></table>";
   document.getElementById("mbg").classList.add("open");
 }
 function closeMod(e){if(!e||e.target===document.getElementById("mbg"))document.getElementById("mbg").classList.remove("open");}
