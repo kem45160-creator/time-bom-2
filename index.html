@@ -1038,7 +1038,7 @@ async function pushGist(){
   var st=document.getElementById("gistStatus");
   st.className="gist-status";st.textContent="☁️ กำลังอัปโหลดข้อมูล...";
   // แยก rows และ IMG_MAP เป็น 2 ไฟล์ใน Gist เดียวกัน
-  var dataPayload={ts:Date.now(),rows:ROWS,wc_data:WC_DATA};
+  var dataPayload={ts:Date.now(),rows:ROWS,rows_all:ROWS_ALL,wc_data:WC_DATA};
   var files={"delivery_data.json":{content:JSON.stringify(dataPayload)}};
   // รูปภาพ: แบ่งเป็น chunks เพื่อหลีกเลี่ยง Gist 1MB limit
   var imgKeys=Object.keys(IMG_MAP);
@@ -1092,6 +1092,7 @@ async function pollGist(){
     var payload=JSON.parse(raw);
     if(!payload.rows||!payload.rows.length){st.className="gist-status err";st.textContent="❌ ไม่พบ data ใน Gist (เครื่อง X ยังไม่ได้ส่ง)";return;}
     ROWS=payload.rows;
+    ROWS_ALL=payload.rows_all||payload.rows;
     // restore WC_DATA + progress bar
     if(payload.wc_data&&Object.keys(payload.wc_data).length){
       WC_DATA=payload.wc_data;
